@@ -13,6 +13,7 @@ import { SharedElement } from 'react-navigation-shared-element';
 import BlurView from 'react-native-blur-effect';
 import { Slider } from 'react-native-elements';
 import { useProgress } from 'react-native-track-player';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 const transition = SharedTransition.custom((values) => {
   'worklet';
   return {
@@ -22,6 +23,8 @@ const transition = SharedTransition.custom((values) => {
 const {width,height}=Dimensions.get("screen")
 export const storage = new MMKV()
 const audio = require("../musics/1.mp3")
+let API_KEY="AIzaSyCLk9WSnLZhhmP8QEQGl2250pGR6JwAGAk"
+const genAI = new GoogleGenerativeAI(API_KEY);
 const Home = () => {
   const tx=useSharedValue(0)
   const t1x=useSharedValue({width:0,transformx:0,transformy:0,opacity:1})
@@ -108,16 +111,38 @@ async function getnkvt(access_token) {
 
   //return await response.json();
 }
-  /* url: audio,
-        title: 'Wrecking Ball',
-        artist: 'Miley Cyrus',
-        album: 'Bangerz',
-        genre: 'Pop',
-        date: '2013-08-25T00:00:00+00:00',
-        artwork: 'https://i.ytimg.com/vi/My2FRPA3Gf8/maxresdefault.jpg',
-        duration: 141 */
+async function run() {
+  // For text-only input, use the gemini-pro model
+  const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+
+  const chat = model.startChat({
+    history: [
+      {
+        role: "user",
+        parts: [{ text: "Hello, I have 2 dogs in my house." }],
+      },
+      {
+        role: "model",
+        parts: [{ text: "Great to meet you. What would you like to know?" }],
+      },
+    ],
+    generationConfig: {
+      maxOutputTokens: 100,
+    },
+  });
+
+  const msg = "How many paws are in my house?";
+
+  const result = await model.generateContentStream(msg)
+  let text = '';
+  for await (const chunk of result.stream) {
+    const chunkText = chunk.text();
+    console.log(chunkText);
+    text += chunkText;
+  }
+}
     async function set(){
-     
+     run()
     
       
       try {
@@ -280,10 +305,11 @@ async function getnkvt(access_token) {
         0,300
       ],[0,width/4],Extrapolation.CLAMP)
       const b = interpolate(tx.value,[
-        0,200
+        0,300
       ],[0,-196],Extrapolation.CLAMP)
       return{
-        transform:[{translateY:b}],
+        transform:[{translateY:withTiming(b,{duration:30,easing: Easing.bezier(0.27, 0.87, 0.53, 0.91),
+          })}],
       }
     })
     const st3= useAnimatedStyle(()=>{
@@ -296,11 +322,13 @@ async function getnkvt(access_token) {
       const n = interpolate(tx.value,[
         0,300
       ],[0,width/4],Extrapolation.CLAMP)
-      const b = interpolate(tx.value*2,[
+      const b = interpolate(tx.value,[
         0,300
       ],[0,8],Extrapolation.CLAMP)
       return{
-        transform:[{translateX:n},{translateY:b}],
+        transform:[{translateX:withTiming(n,{duration:30,easing: Easing.bezier(0.27, 0.87, 0.53, 0.91),
+          })},{translateY:withTiming(b,{duration:30,easing: Easing.bezier(0.27, 0.87, 0.53, 0.91),
+            })}],
       }
     })
     const sty= useAnimatedStyle(()=>{
@@ -388,8 +416,7 @@ async function getnkvt(access_token) {
 
 
           <FlashList
-          
-          scrollEventThrottle={6}
+          scrollEventThrottle={0}
           onScroll={(e)=>{
               tx.value=e.nativeEvent.contentOffset.y
             
